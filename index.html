@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup Tester</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f0f0f0;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #444;
+    }
+
+    /* ── Main row ── */
+    .main-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    /* ── Canvas area ── */
+    #canvas-wrap {
+      position: relative;
+      display: inline-block;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+      background: #fff;
+      cursor: default;
+    }
+
+    #canvas-wrap .zone-label {
+      position: absolute;
+      top: 9px; left: 11px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #aaa;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #main-canvas { display: block; }
+
+    /* empty product state */
+    #product-empty {
+      width: 380px;
+      height: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #ccc;
+      cursor: pointer;
+    }
+    #product-empty svg { width: 32px; height: 32px; }
+    #product-empty span { font-size: 0.75rem; }
+
+    /* ── SVG handle overlay ── */
+    #handle-svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      display: none;
+    }
+
+    #sel-rect {
+      fill: none;
+      stroke: rgba(99,102,241,0.75);
+      stroke-width: 1.5;
+      stroke-dasharray: 5 4;
+    }
+
+    .hndl {
+      pointer-events: all;
+      fill: #fff;
+      stroke: rgba(99,102,241,0.9);
+      stroke-width: 2;
+      rx: 3; ry: 3;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.2));
+    }
+
+    /* ── Design upload panel ── */
+    .drop-zone {
+      width: 170px;
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      position: relative;
+      padding: 16px 12px;
+      gap: 10px;
+      min-height: 130px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #555; }
+
+    .drop-zone .dz-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #aaa;
+    }
+
+    .drop-zone .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: #ccc;
+      pointer-events: none;
+    }
+
+    .drop-zone .placeholder svg { width: 26px; height: 26px; }
+    .drop-zone .placeholder span { font-size: 0.72rem; }
+
+    .drop-zone .thumb {
+      width: 100%;
+      max-height: 90px;
+      object-fit: contain;
+      display: none;
+      border-radius: 4px;
+    }
+
+    .drop-zone.has-image .thumb { display: block; }
+    .drop-zone.has-image .placeholder { display: none; }
+
+    .drop-zone .hint {
+      font-size: 0.62rem;
+      color: #bbb;
+      text-align: center;
+      line-height: 1.4;
+      display: none;
+    }
+
+    .drop-zone.has-image .hint { display: block; }
+
+    input[type="file"] { display: none; }
+
+    /* ── Controls bar ── */
+    .controls {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      background: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.75rem;
+      color: #555;
+    }
+
+    .ctrl-group label { font-weight: 600; white-space: nowrap; }
+
+    select {
+      font-size: 0.75rem;
+      padding: 4px 6px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: #fafafa;
+      color: #333;
+      cursor: pointer;
+    }
+
+    input[type="range"] { width: 90px; accent-color: #6366f1; cursor: pointer; }
+
+    .divider { width: 1px; height: 24px; background: #e5e5e5; }
+
+    button {
+      padding: 8px 22px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    #btn-export {
+      background: #222;
+      color: #fff;
+    }
+    #btn-export:hover { background: #444; }
+    #btn-export:disabled { opacity: 0.4; cursor: default; }
+
+    #btn-reset {
+      background: transparent;
+      color: #888;
+      border: 1px solid #ddd;
+      padding: 7px 14px;
+    }
+    #btn-reset:hover { border-color: #999; color: #444; }
+
+    #status {
+      font-size: 0.72rem;
+      color: #999;
+      min-height: 1em;
+      text-align: center;
+    }
+
+    /* ── Output section ── */
+    #output-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #output-section .out-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #aaa;
+    }
+
+    #output-img {
+      max-width: 520px;
+      border-radius: 10px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+      display: block;
+    }
+
+    #btn-download {
+      background: #6366f1;
+      color: #fff;
+      padding: 9px 28px;
+    }
+    #btn-download:hover { background: #4f46e5; }
+  </style>
+</head>
+<body>
+
+  <h1>Mockup Tester</h1>
+
+  <div class="main-row">
+    <!-- Main composite canvas -->
+    <div id="canvas-wrap" onclick="handleCanvasClick(event)">
+      <span class="zone-label">Product Image</span>
+      <div id="product-empty">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <span>Click or drop product image</span>
+      </div>
+      <canvas id="main-canvas" style="display:none;"></canvas>
+
+      <!-- SVG selection + handles overlay -->
+      <svg id="handle-svg" xmlns="http://www.w3.org/2000/svg">
+        <rect id="sel-rect" x="0" y="0" width="0" height="0"/>
+        <!-- TL TR BR BL handles — 14×14 squares -->
+        <rect class="hndl" id="h-tl" width="14" height="14"/>
+        <rect class="hndl" id="h-tr" width="14" height="14"/>
+        <rect class="hndl" id="h-br" width="14" height="14"/>
+        <rect class="hndl" id="h-bl" width="14" height="14"/>
+      </svg>
+    </div>
+    <input type="file" id="input-product" accept="image/*" />
+
+    <!-- Design upload -->
+    <div class="drop-zone" id="zone-design" onclick="document.getElementById('input-design').click()">
+      <span class="dz-label">Design Image</span>
+      <div class="placeholder">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <span>Click or drop</span>
+      </div>
+      <img class="thumb" id="design-thumb" alt="" />
+      <span class="hint">Drag on canvas<br>to position</span>
+    </div>
+    <input type="file" id="input-design" accept="image/*" />
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl-group">
+      <label>Blend</label>
+      <select id="blend-mode">
+        <option value="overlay" selected>Overlay</option>
+        <option value="soft-light">Soft Light</option>
+        <option value="multiply">Multiply</option>
+        <option value="screen">Screen</option>
+        <option value="source-over">None</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Opacity</label>
+      <input type="range" id="blend-slider" min="0" max="100" value="85" step="1"
+             oninput="document.getElementById('blend-val').textContent=this.value; redraw()">
+      <span id="blend-val">85</span>%
+    </div>
+    <div class="divider"></div>
+    <div class="ctrl-group">
+      <label>Displacement</label>
+      <input type="range" id="strength-slider" min="0" max="50" value="20" step="1"
+             oninput="document.getElementById('strength-val').textContent=this.value">
+      <span id="strength-val">20</span>px
+    </div>
+    <div class="divider"></div>
+    <button id="btn-reset" onclick="resetOverlay()">Reset</button>
+    <button id="btn-export" onclick="doExport()" disabled>Export</button>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- Output -->
+  <div id="output-section">
+    <span class="out-label">Final Result (with displacement)</span>
+    <img id="output-img" alt="Final result" />
+    <button id="btn-download" onclick="downloadResult()">Download PNG</button>
+  </div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let productFile = null;
+let designFile  = null;
+let productImg  = null;
+let designImg   = null;
+
+// Overlay rect in canvas display pixels
+let ov = { x: 0, y: 0, w: 0, h: 0, visible: false };
+
+const canvas      = document.getElementById('main-canvas');
+const ctx         = canvas.getContext('2d');
+const canvasWrap  = document.getElementById('canvas-wrap');
+const productEmpty= document.getElementById('product-empty');
+const handleSvg   = document.getElementById('handle-svg');
+const selRect     = document.getElementById('sel-rect');
+const handles     = { tl: document.getElementById('h-tl'), tr: document.getElementById('h-tr'),
+                      br: document.getElementById('h-br'), bl: document.getElementById('h-bl') };
+const btnExport   = document.getElementById('btn-export');
+const statusEl    = document.getElementById('status');
+const blendModeEl = document.getElementById('blend-mode');
+const blendSlider = document.getElementById('blend-slider');
+
+// ── Product loading ───────────────────────────────────────────────────────────
+function handleCanvasClick(e) {
+  if (productImg) return;
+  document.getElementById('input-product').click();
+}
+
+document.getElementById('input-product').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) loadProduct(f);
+});
+
+canvasWrap.addEventListener('dragover', e => e.preventDefault());
+canvasWrap.addEventListener('drop', e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadProduct(f);
+});
+
+function loadProduct(file) {
+  productFile = file;
+  const img = new Image();
+  img.onload = () => {
+    productImg = img;
+    const MAX = 520;
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const s = Math.min(1, MAX / Math.max(w, h));
+    w = Math.round(w * s);
+    h = Math.round(h * s);
+
+    canvas.width  = w;
+    canvas.height = h;
+
+    productEmpty.style.display = 'none';
+    canvas.style.display = 'block';
+    handleSvg.style.display = 'block';
+
+    if (designImg) placeDefault();
+    redraw();
+    checkReady();
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+// ── Design loading ────────────────────────────────────────────────────────────
+document.getElementById('input-design').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) loadDesign(f);
+});
+
+const zoneDesign = document.getElementById('zone-design');
+zoneDesign.addEventListener('dragover', e => { e.preventDefault(); zoneDesign.classList.add('drag-over'); });
+zoneDesign.addEventListener('dragleave', () => zoneDesign.classList.remove('drag-over'));
+zoneDesign.addEventListener('drop', e => {
+  e.preventDefault();
+  zoneDesign.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadDesign(f);
+});
+
+function loadDesign(file) {
+  designFile = file;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    designImg = img;
+    document.getElementById('design-thumb').src = url;
+    zoneDesign.classList.add('has-image');
+    if (productImg) placeDefault();
+    redraw();
+    checkReady();
+  };
+  img.src = url;
+}
+
+// ── Placement default ─────────────────────────────────────────────────────────
+function placeDefault() {
+  const cw = canvas.width, ch = canvas.height;
+  const target = Math.round(Math.min(cw, ch) * 0.42);
+  const aspect = designImg.naturalWidth / designImg.naturalHeight;
+  let dw, dh;
+  if (aspect >= 1) { dw = target; dh = Math.round(target / aspect); }
+  else             { dh = target; dw = Math.round(target * aspect); }
+  ov = { x: Math.round((cw - dw) / 2), y: Math.round((ch - dh) / 2), w: dw, h: dh, visible: true };
+  updateHandles();
+}
+
+function resetOverlay() {
+  if (productImg && designImg) placeDefault();
+  redraw();
+}
+
+// ── Canvas redraw (runs every frame during interaction) ───────────────────────
+function redraw() {
+  if (!productImg) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 1. Draw product — always pixel-perfect base
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.drawImage(productImg, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
+
+  // 2. Draw design with blend mode
+  if (designImg && ov.visible) {
+    const mode    = blendModeEl.value;
+    const opacity = parseInt(blendSlider.value) / 100;
+
+    ctx.save();
+    ctx.globalCompositeOperation = mode;
+    ctx.globalAlpha = opacity;
+    ctx.drawImage(designImg, ov.x, ov.y, ov.w, ov.h);
+    ctx.restore();
+  }
+}
+
+// ── SVG handle positioning ────────────────────────────────────────────────────
+const HSIZE = 14;
+
+function updateHandles() {
+  if (!ov.visible) return;
+  const { x, y, w, h } = ov;
+
+  selRect.setAttribute('x', x);
+  selRect.setAttribute('y', y);
+  selRect.setAttribute('width', w);
+  selRect.setAttribute('height', h);
+
+  const positions = {
+    tl: [x - HSIZE/2,     y - HSIZE/2    ],
+    tr: [x + w - HSIZE/2, y - HSIZE/2    ],
+    br: [x + w - HSIZE/2, y + h - HSIZE/2],
+    bl: [x - HSIZE/2,     y + h - HSIZE/2],
+  };
+
+  for (const [id, [hx, hy]] of Object.entries(positions)) {
+    handles[id].setAttribute('x', hx);
+    handles[id].setAttribute('y', hy);
+  }
+}
+
+// ── Drag & resize interaction ─────────────────────────────────────────────────
+const MIN_SIZE = 20;
+let iact = null;
+
+function clamp() {
+  const cw = canvas.width, ch = canvas.height;
+  ov.w = Math.max(MIN_SIZE, ov.w);
+  ov.h = Math.max(MIN_SIZE, ov.h);
+  ov.x = Math.max(0, Math.min(cw - ov.w, ov.x));
+  ov.y = Math.max(0, Math.min(ch - ov.h, ov.y));
+}
+
+// Convert client coords to canvas display pixels
+function toCanvas(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width  / rect.width;
+  const sy = canvas.height / rect.height;
+  return [(clientX - rect.left) * sx, (clientY - rect.top) * sy];
+}
+
+// Body of the selection rect acts as the move handle
+handleSvg.addEventListener('mousedown', e => {
+  if (e.target === handleSvg || e.target === selRect) {
+    e.preventDefault();
+    iact = { mode: 'move', startX: e.clientX, startY: e.clientY, startOv: { ...ov } };
+  }
+});
+
+selRect.style.pointerEvents = 'all';
+selRect.style.cursor = 'move';
+
+for (const [corner, el] of Object.entries(handles)) {
+  el.style.cursor = (corner === 'tl' || corner === 'br') ? 'nwse-resize' : 'nesw-resize';
+  el.addEventListener('mousedown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    iact = { mode: corner, startX: e.clientX, startY: e.clientY, startOv: { ...ov } };
+  });
+}
+
+window.addEventListener('mousemove', e => {
+  if (!iact) return;
+  const dx = e.clientX - iact.startX;
+  const dy = e.clientY - iact.startY;
+  const s  = iact.startOv;
+
+  // Scale mouse delta from screen pixels to canvas pixels
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width  / rect.width;
+  const sy = canvas.height / rect.height;
+  const ddx = dx * sx, ddy = dy * sy;
+
+  switch (iact.mode) {
+    case 'move': ov.x = s.x + ddx; ov.y = s.y + ddy; ov.w = s.w; ov.h = s.h; break;
+    case 'br':   ov.x = s.x; ov.y = s.y; ov.w = s.w + ddx; ov.h = s.h + ddy; break;
+    case 'tl':   ov.x = s.x + ddx; ov.y = s.y + ddy; ov.w = s.w - ddx; ov.h = s.h - ddy; break;
+    case 'tr':   ov.x = s.x; ov.y = s.y + ddy; ov.w = s.w + ddx; ov.h = s.h - ddy; break;
+    case 'bl':   ov.x = s.x + ddx; ov.y = s.y; ov.w = s.w - ddx; ov.h = s.h + ddy; break;
+  }
+  clamp();
+  updateHandles();
+  redraw();
+});
+
+window.addEventListener('mouseup', () => { iact = null; });
+
+// Touch
+handleSvg.addEventListener('touchstart', e => {
+  if (e.target === handleSvg || e.target === selRect) {
+    e.preventDefault();
+    const t = e.touches[0];
+    iact = { mode: 'move', startX: t.clientX, startY: t.clientY, startOv: { ...ov } };
+  }
+}, { passive: false });
+
+for (const [corner, el] of Object.entries(handles)) {
+  el.addEventListener('touchstart', e => {
+    e.preventDefault(); e.stopPropagation();
+    const t = e.touches[0];
+    iact = { mode: corner, startX: t.clientX, startY: t.clientY, startOv: { ...ov } };
+  }, { passive: false });
+}
+
+window.addEventListener('touchmove', e => {
+  if (!iact) return;
+  const t = e.touches[0];
+  const dx = t.clientX - iact.startX;
+  const dy = t.clientY - iact.startY;
+  const s  = iact.startOv;
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+  const ddx = dx * sx, ddy = dy * sy;
+
+  switch (iact.mode) {
+    case 'move': ov.x = s.x + ddx; ov.y = s.y + ddy; ov.w = s.w; ov.h = s.h; break;
+    case 'br':   ov.x = s.x; ov.y = s.y; ov.w = s.w + ddx; ov.h = s.h + ddy; break;
+    case 'tl':   ov.x = s.x + ddx; ov.y = s.y + ddy; ov.w = s.w - ddx; ov.h = s.h - ddy; break;
+    case 'tr':   ov.x = s.x; ov.y = s.y + ddy; ov.w = s.w + ddx; ov.h = s.h - ddy; break;
+    case 'bl':   ov.x = s.x + ddx; ov.y = s.y; ov.w = s.w - ddx; ov.h = s.h + ddy; break;
+  }
+  clamp();
+  updateHandles();
+  redraw();
+}, { passive: true });
+
+window.addEventListener('touchend', () => { iact = null; });
+
+// Blend mode select change
+blendModeEl.addEventListener('change', redraw);
+
+// ── Export (server call for displacement + final blend) ───────────────────────
+function checkReady() {
+  btnExport.disabled = !(productFile && designFile && productImg);
+}
+
+async function doExport() {
+  if (!productFile || !designFile) return;
+
+  setStatus('Generating final image…');
+  btnExport.disabled = true;
+
+  const sx = productImg.naturalWidth  / canvas.width;
+  const sy = productImg.naturalHeight / canvas.height;
+  const placement = {
+    x: Math.round(ov.x * sx),
+    y: Math.round(ov.y * sy),
+    w: Math.round(ov.w * sx),
+    h: Math.round(ov.h * sy),
+  };
+
+  const strength  = document.getElementById('strength-slider').value;
+  const blend     = (parseFloat(blendSlider.value) / 100).toFixed(2);
+  const blendMode = blendModeEl.value;
+
+  const form = new FormData();
+  form.append('product',    productFile);
+  form.append('design',     designFile);
+  form.append('placement',  JSON.stringify(placement));
+  form.append('strength',   strength);
+  form.append('blend',      blend);
+  form.append('blend_mode', blendMode);
+
+  try {
+    const res = await fetch('http://localhost:5001/merge', { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
+    }
+    const data = await res.json();
+    const outImg = document.getElementById('output-img');
+    outImg.src = 'data:image/png;base64,' + data.result;
+    outImg.dataset.b64 = data.result;
+    const section = document.getElementById('output-section');
+    section.style.display = 'flex';
+    setStatus('Done.');
+  } catch (err) {
+    setStatus('Error: ' + err.message);
+  } finally {
+    btnExport.disabled = false;
+  }
+}
+
+function downloadResult() {
+  const b64 = document.getElementById('output-img').dataset.b64;
+  if (!b64) return;
+  const a = document.createElement('a');
+  a.href = 'data:image/png;base64,' + b64;
+  a.download = 'mockup.png';
+  a.click();
+}
+
+function setStatus(msg) { statusEl.textContent = msg; }
+</script>
+</body>
+</html>
